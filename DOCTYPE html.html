@@ -1,0 +1,503 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>惠斯通电桥测电阻模拟实验</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            margin: 0 0 10px 0;
+        }
+
+        .formula {
+            font-size: 1.2em;
+            background: var(--card-bg);
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: inline-block;
+        }
+
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            max-width: 1000px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        }
+
+        .left-panel {
+            flex: 1;
+            min-width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .right-panel {
+            flex: 1;
+            min-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* 控件样式 */
+        .control-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .control-group label {
+            width: 60px;
+            font-weight: bold;
+        }
+
+        input[type="range"] {
+            width: 200px;
+            cursor: pointer;
+        }
+
+        input[type="number"] {
+            width: 80px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        /* 检流计与结果区域 */
+        .galvanometer-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .result-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 5px solid var(--accent-color);
+        }
+
+        .result-item {
+            margin: 10px 0;
+            font-size: 1.1em;
+        }
+
+        .status {
+            font-weight: bold;
+        }
+        .status.balanced {
+            color: var(--success-color);
+        }
+        .status.unbalanced {
+            color: var(--danger-color);
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .btn-reset {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1em;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .btn-reset:hover {
+            background-color: #2980b9;
+        }
+
+        canvas {
+            background: #fff;
+            border: 1px solid #eee;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>惠斯通电桥测电阻模拟实验</h1>
+        <div class="formula">平衡条件：R<sub>x</sub> = (R<sub>2</sub> / R<sub>1</sub>) × R<sub>3</sub></div>
+    </div>
+
+    <div class="container">
+        <div class="card left-panel">
+            <h3>电路原理图</h3>
+            <canvas id="circuitCanvas" width="500" height="350"></canvas>
+            <p style="color: #7f8c8d; font-size: 0.9em; margin-top: 15px;">
+                * 提示：调节右侧 R<sub>3</sub> 阻值，观察检流计指针变化，直至电桥平衡。
+            </p>
+        </div>
+
+        <div class="right-panel">
+            <div class="card">
+                <h3>参数调节</h3>
+                <div class="control-group">
+                    <label>R<sub>1</sub> (Ω)</label>
+                    <input type="range" id="r1-slider" min="10" max="2000" step="1" value="200">
+                    <input type="number" id="r1-num" min="10" max="2000" value="200">
+                </div>
+                <div class="control-group">
+                    <label>R<sub>2</sub> (Ω)</label>
+                    <input type="range" id="r2-slider" min="10" max="2000" step="1" value="200">
+                    <input type="number" id="r2-num" min="10" max="2000" value="200">
+                </div>
+                <div class="control-group">
+                    <label>R<sub>3</sub> (Ω)</label>
+                    <input type="range" id="r3-slider" min="10" max="5000" step="1" value="100">
+                    <input type="number" id="r3-num" min="10" max="5000" value="100">
+                </div>
+                <hr style="border-top: 1px dashed #ccc; margin: 15px 0;">
+                <div class="control-group">
+                    <label>R<sub>x</sub>真实值</label>
+                    <input type="range" id="rx-slider" min="10" max="5000" step="1" value="300">
+                    <input type="number" id="rx-num" min="10" max="5000" value="300">
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="galvanometer-container">
+                    <h3>检流计 G</h3>
+                    <canvas id="galvanometerCanvas" width="150" height="150"></canvas>
+                    <div style="margin-top: 10px;">
+                        不平衡电压 V<sub>g</sub>: <span id="vg-display">0.00</span> mV
+                        <span id="status-display" class="status unbalanced">（不平衡）</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card result-panel">
+                <div class="result-item">
+                    测量值 R<sub>x,meas</sub> = <span id="rx-meas-display">0.00</span> Ω
+                </div>
+                <div class="result-item">
+                    相对误差 = <span id="error-display">0.00</span> %
+                </div>
+                <button class="btn-reset" onclick="resetDefaults()">重置预设值</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- 1. 全局变量与 DOM 元素 ---
+    const Vs = 10; // 电源电压 10V
+    const Vmax = 1; // 检流计满偏电压 1V (1000mV)
+
+    const inputs = {
+        r1: { slider: document.getElementById('r1-slider'), num: document.getElementById('r1-num') },
+        r2: { slider: document.getElementById('r2-slider'), num: document.getElementById('r2-num') },
+        r3: { slider: document.getElementById('r3-slider'), num: document.getElementById('r3-num') },
+        rx: { slider: document.getElementById('rx-slider'), num: document.getElementById('rx-num') }
+    };
+
+    const displays = {
+        vg: document.getElementById('vg-display'),
+        status: document.getElementById('status-display'),
+        rxMeas: document.getElementById('rx-meas-display'),
+        error: document.getElementById('error-display')
+    };
+
+    const ctxCircuit = document.getElementById('circuitCanvas').getContext('2d');
+    const ctxGalva = document.getElementById('galvanometerCanvas').getContext('2d');
+
+    // --- 2. 核心逻辑函数 ---
+
+    // 读取当前输入值
+    function getValues() {
+        return {
+            R1: Math.max(10, parseFloat(inputs.r1.num.value) || 10),
+            R2: Math.max(10, parseFloat(inputs.r2.num.value) || 10),
+            R3: Math.max(10, parseFloat(inputs.r3.num.value) || 10),
+            Rx_real: Math.max(10, parseFloat(inputs.rx.num.value) || 10)
+        };
+    }
+
+    // 主更新函数
+    function updateAll() {
+        const { R1, R2, R3, Rx_real } = getValues();
+
+        // 计算不平衡电压 Vg = Vs * (R2/(R1+R2) - Rx_real/(R3+Rx_real))
+        // 注意：计算基于您提供的公式结构
+        const Vg = Vs * (R2 / (R1 + R2) - Rx_real / (R3 + Rx_real));
+        const Vg_mV = Vg * 1000;
+
+        // 计算测量值 Rx_meas = (R2 / R1) * R3
+        const Rx_meas = (R2 / R1) * R3;
+
+        // 计算相对误差
+        const error = Math.abs((Rx_meas - Rx_real) / Rx_real) * 100;
+
+        // 更新文本显示
+        displays.vg.innerText = Vg_mV.toFixed(2);
+        displays.rxMeas.innerText = Rx_meas.toFixed(2);
+        displays.error.innerText = error.toFixed(2);
+
+        // 判断是否平衡 (|Vg| < 1mV)
+        if (Math.abs(Vg_mV) < 1.0) {
+            displays.status.innerText = "（电桥平衡）";
+            displays.status.className = "status balanced";
+        } else {
+            displays.status.innerText = "（不平衡）";
+            displays.status.className = "status unbalanced";
+        }
+
+        // 重新绘制画布
+        drawCircuit(R1, R2, R3, Rx_real);
+        drawGalvanometer(Vg);
+    }
+
+    // --- 3. Canvas 绘图函数 ---
+
+    // 辅助函数：绘制带文字的电阻
+    function drawResistor(ctx, x1, y1, x2, y2, label, value) {
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        
+        const midX = (x1 + x2) / 2;
+        const midY = (y1 + y2) / 2;
+        const angle = Math.atan2(y2 - y1, x2 - x1);
+        const length = 40; // 电阻框长度
+        const width = 12;  // 电阻框宽度
+        
+        // 移动到电阻框起点
+        const startX = midX - (length/2) * Math.cos(angle);
+        const startY = midY - (length/2) * Math.sin(angle);
+        ctx.lineTo(startX, startY);
+        ctx.stroke();
+
+        // 保存状态，旋转画布画矩形
+        ctx.save();
+        ctx.translate(midX, midY);
+        ctx.rotate(angle);
+        ctx.fillStyle = "#fff";
+        ctx.fillRect(-length/2, -width/2, length, width);
+        ctx.strokeRect(-length/2, -width/2, length, width);
+        
+        // 写文字（稍微偏移一点）
+        ctx.rotate(-angle); // 字体不旋转
+        ctx.fillStyle = "#2c3e50";
+        ctx.font = "14px Arial";
+        ctx.textAlign = "center";
+        
+        // 判断文字在上还是在下
+        let yOffset = (angle > 0) ? -15 : 25; 
+        if (Math.abs(angle) < 0.1) yOffset = -15; // 水平时放上面
+
+        ctx.fillText(`${label}=${value}Ω`, 0, yOffset);
+        ctx.restore();
+
+        // 移动到电阻框终点并画完剩余线段
+        const endX = midX + (length/2) * Math.cos(angle);
+        const endY = midY + (length/2) * Math.sin(angle);
+        ctx.beginPath();
+        ctx.moveTo(endX, endY);
+        ctx.lineTo(x2, y2);
+        ctx.stroke();
+    }
+
+    // 绘制电路图
+    function drawCircuit(R1, R2, R3, Rx) {
+        ctxCircuit.clearRect(0, 0, 500, 350);
+        ctxCircuit.lineWidth = 2;
+        ctxCircuit.strokeStyle = "#34495e";
+
+        // 节点坐标 (菱形布局)
+        const topNode = { x: 250, y: 60 };
+        const bottomNode = { x: 250, y: 260 };
+        const leftNode = { x: 100, y: 160 };
+        const rightNode = { x: 400, y: 160 };
+
+        // 绘制四个桥臂的电阻
+        drawResistor(ctxCircuit, topNode.x, topNode.y, leftNode.x, leftNode.y, "R1", R1);
+        drawResistor(ctxCircuit, topNode.x, topNode.y, rightNode.x, rightNode.y, "R2", R2);
+        drawResistor(ctxCircuit, leftNode.x, leftNode.y, bottomNode.x, bottomNode.y, "R3", R3);
+        drawResistor(ctxCircuit, rightNode.x, rightNode.y, bottomNode.x, bottomNode.y, "Rx", Rx);
+
+        // 绘制检流计连线
+        ctxCircuit.beginPath();
+        ctxCircuit.moveTo(leftNode.x, leftNode.y);
+        ctxCircuit.lineTo(rightNode.x, rightNode.y);
+        ctxCircuit.stroke();
+
+        // 绘制检流计圆圈
+        ctxCircuit.beginPath();
+        ctxCircuit.arc(250, 160, 20, 0, Math.PI * 2);
+        ctxCircuit.fillStyle = "#fff";
+        ctxCircuit.fill();
+        ctxCircuit.stroke();
+        ctxCircuit.fillStyle = "#e74c3c";
+        ctxCircuit.font = "bold 16px Arial";
+        ctxCircuit.textAlign = "center";
+        ctxCircuit.textBaseline = "middle";
+        ctxCircuit.fillText("G", 250, 160);
+
+        // 绘制电源及外部连线
+        ctxCircuit.beginPath();
+        // 上顶点引线
+        ctxCircuit.moveTo(topNode.x, topNode.y);
+        ctxCircuit.lineTo(topNode.x, 20);
+        ctxCircuit.lineTo(40, 20);
+        ctxCircuit.lineTo(40, 130);
+        // 下顶点引线
+        ctxCircuit.moveTo(bottomNode.x, bottomNode.y);
+        ctxCircuit.lineTo(bottomNode.x, 320);
+        ctxCircuit.lineTo(40, 320);
+        ctxCircuit.lineTo(40, 190);
+        ctxCircuit.stroke();
+
+        // 画电源符号（长短线）
+        ctxCircuit.beginPath();
+        ctxCircuit.moveTo(20, 130); ctxCircuit.lineTo(60, 130); // 正极长线
+        ctxCircuit.moveTo(30, 190); ctxCircuit.lineTo(50, 190); // 负极短线
+        ctxCircuit.stroke();
+        
+        ctxCircuit.fillStyle = "#34495e";
+        ctxCircuit.fillText("10V", 15, 160);
+    }
+
+    // 绘制检流计表盘
+    function drawGalvanometer(Vg) {
+        const cx = 75, cy = 100, r = 70;
+        ctxGalva.clearRect(0, 0, 150, 150);
+
+        // 1. 画刻度盘背景弧线
+        ctxGalva.beginPath();
+        ctxGalva.arc(cx, cy, r, Math.PI + Math.PI/6, Math.PI*2 - Math.PI/6);
+        ctxGalva.lineWidth = 2;
+        ctxGalva.strokeStyle = "#7f8c8d";
+        ctxGalva.stroke();
+
+        // 2. 画刻度线
+        ctxGalva.textAlign = "center";
+        ctxGalva.textBaseline = "bottom";
+        ctxGalva.font = "10px Arial";
+        ctxGalva.fillStyle = "#2c3e50";
+        
+        const maxAngle = Math.PI / 3; // 满偏角度 60度
+        for (let i = -3; i <= 3; i++) {
+            const angle = -Math.PI/2 + i * (maxAngle / 3);
+            const x1 = cx + r * Math.cos(angle);
+            const y1 = cy + r * Math.sin(angle);
+            const x2 = cx + (r - 8) * Math.cos(angle);
+            const y2 = cy + (r - 8) * Math.sin(angle);
+            
+            ctxGalva.beginPath();
+            ctxGalva.moveTo(x1, y1);
+            ctxGalva.lineTo(x2, y2);
+            ctxGalva.stroke();
+            
+            // 画个 0 刻度
+            if (i === 0) {
+                ctxGalva.fillText("0", cx + (r - 15) * Math.cos(angle), cy + (r - 15) * Math.sin(angle));
+            }
+        }
+
+        // 3. 计算指针角度并绘制
+        // Vg 限制在 -Vmax 到 Vmax 之间
+        let clampedVg = Math.max(-Vmax, Math.min(Vmax, Vg));
+        let pointerAngle = -Math.PI/2 + (clampedVg / Vmax) * maxAngle;
+
+        const px = cx + (r - 10) * Math.cos(pointerAngle);
+        const py = cy + (r - 10) * Math.sin(pointerAngle);
+
+        ctxGalva.beginPath();
+        ctxGalva.moveTo(cx, cy);
+        ctxGalva.lineTo(px, py);
+        ctxGalva.lineWidth = 3;
+        ctxGalva.strokeStyle = "#e74c3c"; // 红色指针
+        ctxGalva.stroke();
+
+        // 4. 画中心圆帽
+        ctxGalva.beginPath();
+        ctxGalva.arc(cx, cy, 6, 0, Math.PI*2);
+        ctxGalva.fillStyle = "#2c3e50";
+        ctxGalva.fill();
+    }
+
+    // --- 4. 事件绑定与初始化 ---
+
+    // 绑定滑块和输入框的双向同步
+    function bindInputs(key) {
+        inputs[key].slider.addEventListener('input', (e) => {
+            inputs[key].num.value = e.target.value;
+            updateAll();
+        });
+        inputs[key].num.addEventListener('change', (e) => {
+            // 确保输入值不超出 min/max 范围，且不小于10防止除零
+            let val = parseFloat(e.target.value);
+            if (val < 10) val = 10;
+            if (val > inputs[key].slider.max) val = inputs[key].slider.max;
+            e.target.value = val;
+            inputs[key].slider.value = val;
+            updateAll();
+        });
+    }
+
+    Object.keys(inputs).forEach(bindInputs);
+
+    // 重置按钮逻辑
+    function resetDefaults() {
+        inputs.r1.slider.value = inputs.r1.num.value = 200;
+        inputs.r2.slider.value = inputs.r2.num.value = 200;
+        inputs.r3.slider.value = inputs.r3.num.value = 300;
+        inputs.rx.slider.value = inputs.rx.num.value = 300;
+        updateAll();
+    }
+
+    // 页面加载完成后进行初次渲染
+    window.onload = () => {
+        resetDefaults();
+    };
+</script>
+
+</body>
+</html>
+
